@@ -27,7 +27,7 @@ port = 22217
 # password = "pass2"
 
 # 已验证通过的 User-Agent（Android 客户端模拟）
-# user_agent = "DeepSeek/2.0.4 Android/35"
+# user_agent = "DeepSeek/2.1.1 Android/35"
 
 # API 基础地址（默认）
 # api_base = "https://chat.deepseek.com/api/v0"
@@ -36,7 +36,7 @@ port = 22217
 # wasm_url = "https://fe-static.deepseek.com/chat/static/sha3_wasm_bg.7b9ca65ddd.wasm"
 
 # X-Client-Version 请求头（用于 expert 模型等功能）
-# client_version = "2.1.0"
+# client_version = "2.0.0"
 
 # X-Client-Platform 请求头
 # client_platform = "android"

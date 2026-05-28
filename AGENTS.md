@@ -34,18 +34,16 @@ The project is a **Cargo workspace** with two crates:
 ```
 ds_core/src/
 ├── lib.rs           # Public API: re-exports DsCore, CoreError, etc.
-├── ds_core.rs       # Facade: DsCore, CoreError; declares 3 submodules
-└── ds_core/
-    ├── accounts.rs  # Facade: Accounts struct, wraps pool/client/solver
-    ├── accounts/    # Account sub-modules
-    │   ├── client.rs    # Raw HTTP client: API endpoints, Envelope parsing
-    │   ├── pool.rs      # Account pool: init, selection, AccountGuard
-    │   └── pow.rs       # PoW solver: wasmtime WASM loader, DeepSeekHashV1
-    ├── chat.rs      # Facade: Chat struct, prompt-size dispatch
-    ├── chat/        # Chat sub-modules
-    │   ├── request.rs   # Chat orchestration: 3 request paths (normal/file/chunk)
-    │   └── response.rs  # SSE parsing, StreamEvent protocol, GuardedStream
-    └── config.rs    # DsCoreConfig and AccountConfig types
+├── accounts.rs      # Facade: Accounts struct, wraps pool/client/solver
+├── accounts/        # Account sub-modules
+│   ├── client.rs    # Raw HTTP client: API endpoints, Envelope parsing
+│   ├── pool.rs      # Account pool: init, selection, AccountGuard
+│   └── pow.rs       # PoW solver: wasmtime WASM loader, DeepSeekHashV1
+├── chat.rs          # Facade: Chat struct, prompt-size dispatch
+├── chat/            # Chat sub-modules
+│   ├── request.rs   # Chat orchestration: 3 request paths (normal/file/chunk)
+│   └── response.rs  # SSE parsing, StreamEvent protocol, GuardedStream
+└── config.rs        # DsCoreConfig and AccountConfig types
 ```
 
 **`ds-free-api`** (root crate) — binary + server + protocol adapters:
@@ -59,25 +57,25 @@ src/
 │   ├── openai_adapter.rs # Facade: OpenAIAdapter, OpenAIAdapterError, StreamResponse
 │   ├── types.rs         # Request/response structs (ChatCompletionsRequest, etc.)
 │   ├── models.rs        # Model registry and listing endpoints
+│   ├── request.rs       # Facade for request submodules (also contains #[cfg(test)] tests)
 │   ├── request/         # Request pipeline: normalize → tools → files → prompt → resolver
-│   │   ├── request.rs   # Facade for submodules (also contains #[cfg(test)] tests)
 │   │   ├── normalize.rs # Validation, default params
 │   │   ├── tools.rs     # Tool definition → prompt injection
 │   │   ├── files.rs     # Data URL → FilePayload, HTTP URL → search mode
 │   │   ├── prompt.rs    # ChatML → DeepSeek native tags, tool injection
 │   │   └── resolver.rs  # Model resolution, capability toggles
+│   ├── response.rs      # Facade + StreamCfg struct
 │   └── response/        # Response pipeline: converter → tool_parser → repair → stop_detect
-│       ├── response.rs  # Facade + StreamCfg struct
 │       ├── converter.rs # ConverterStream: StreamEvent → ChatCompletionsResponseChunk
 │       └── tool_parser.rs   # ToolCallStream: XML tag detection, sliding-window repair
 │
-├── anthropic_compat/    # Anthropic protocol translator (on top of openai_adapter)
-│   ├── anthropic_compat.rs # Facade
+├── anthropic_compat.rs  # Facade: Anthropic protocol translator (on top of openai_adapter)
+├── anthropic_compat/    # Anthropic compat submodules
 │   ├── types.rs         # MessagesRequest/Response structs
 │   ├── models.rs        # Anthropic-format model list generation
 │   ├── request.rs       # Anthropic JSON → OpenAI request mapping
+│   ├── response.rs      # Facade for response submodules
 │   └── response/
-│       ├── response.rs  # Facade for submodules
 │       ├── stream.rs    # OpenAI SSE → Anthropic SSE events
 │       └── aggregate.rs # OpenAI JSON → Anthropic JSON
 │
@@ -97,8 +95,8 @@ src/
 - `examples/adapter_cli.rs` + `examples/adapter_cli/` — debug CLI + JSON request samples
 - `py-e2e-tests/` — Python e2e test suite (uv-managed, JSON-driven scenarios)
 - `docker/Dockerfile` + `docker/docker-compose.yaml` — Docker deployment (ghcr.io image)
-- `docs/` — `code-style.md`, `logging-spec.md`, `deepseek-prompt-injection.md`, `deepseek-api-reference.md`, `development.md`; English translations under `docs/en/`
-- `docs/en/` — English translations of the Chinese docs in `docs/` (mirror structure)
+- `docs/` — `code-style.md`（代码注释、命名、错误消息约定），`logging-spec.md`（日志级别、target、模块级过滤），`deepseek-prompt-injection.md`（DeepSeek 原生标签、工具调用注入策略），`development.md`（环境配置、首次启动、Release 构建）
+- `ds_core/raw-api-reference.md` — DeepSeek 后端 API 参考（端点、信封格式、SSE 增量协议、PoW、WAF 绕过）
 
 ### Binary / Library Split
 
@@ -115,7 +113,7 @@ Cargo resolves from the workspace root, so commands run from inside `ds_core/` w
 
 ### Facade Module Pattern
 
-`ds_core.rs`, `openai_adapter.rs`, `server.rs`, `request.rs`, `response.rs`, `anthropic_compat.rs`, and `ds_core/accounts.rs`, `ds_core/chat.rs` are **facades**:
+`accounts.rs`, `chat.rs`, `openai_adapter.rs`, `server.rs`, `request.rs`, `response.rs`, `anthropic_compat.rs` are **facades**:
 - They declare submodules with `mod` (keeping implementation private)
 - They re-export only the minimal public interface via `pub use`
 - They sometimes contain `#[cfg(test)]` test modules
@@ -260,7 +258,7 @@ StreamEvent (ds_core) → ConverterStream (converter)
                       → SSE bytes
 ```
 
-SSE parsing and DeepSeek's p/o/v patch protocol are handled inside `ds_core/src/ds_core/chat/response.rs`, which emits `StreamEvent` items. The adapter layer no longer touches raw bytes.
+SSE parsing and DeepSeek's p/o/v patch protocol are handled inside `ds_core/src/chat/response.rs`, which emits `StreamEvent` items. The adapter layer no longer touches raw bytes.
 
 All stream wrappers use `pin_project_lite::pin_project!` macro and implement `Stream` with `poll_next`. Each wrapper is a pinned struct with an inner stream and state, using `Projection` to access fields in `poll_next`.
 
@@ -299,7 +297,7 @@ Request fields mapped in `request/resolver.rs`:
 
 ### Oversized Prompt Fallback
 
-When the prompt (after history splitting) exceeds the completion endpoint's limit, the system falls back to chunked completion (`/api/v0/chat/completion` with file upload) or a dedicated vision model for image-heavy requests. The `oversized_prompt` config section controls threshold and model routing. Implemented in `ds_core/src/ds_core/chat/request.rs` alongside the normal `v0_chat()` flow.
+When the prompt (after history splitting) exceeds the completion endpoint's limit, the system falls back to chunked completion (`/api/v0/chat/completion` with file upload) or a dedicated vision model for image-heavy requests. The `oversized_prompt` config section controls threshold and model routing. Implemented in `ds_core/src/chat/request.rs` alongside the normal `v0_chat()` flow.
 
 ### Anthropic Compatibility Layer
 
@@ -316,7 +314,7 @@ Errors propagate upward with translation at each module boundary:
 1. **`ds_core/client.rs`**: `ClientError` (`Http` | `Status` | `Business` | `Json` | `InvalidHeader`)
    - Parses DeepSeek's wrapper envelope `{code, msg, data: {biz_code, biz_msg, biz_data}}` via `Envelope::into_result()`
 2. **`ds_core/pool.rs`**: `PoolError` (`AllAccountsFailed` | `Client`(ClientError) | `Pow`(PowError) | `Validation` | `Exists`)
-3. **`ds_core/ds_core.rs`**: `CoreError` (`Overloaded` | `ProofOfWorkFailed` | `ProviderError` | `Stream`)
+3. **`ds_core/lib.rs`**: `CoreError` (`Overloaded` | `ProofOfWorkFailed` | `ProviderError` | `Stream`)
 4. **`openai_adapter.rs`**: `OpenAIAdapterError` (`BadRequest` | `Overloaded` | `ProviderError` | `Internal` | `ToolCallRepairNeeded`)
 5. **`anthropic_compat.rs`**: `AnthropicCompatError` (`BadRequest` | `Overloaded` | `Internal`)
 6. **`server/error.rs`**: `ServerError` (`Adapter`(OpenAIAdapterError) | `Anthropic`(AnthropicCompatError) | `Unauthorized` | `NotFound`(String))
@@ -348,7 +346,7 @@ Optional Bearer auth via `[[api_keys]]` in config; no auth when empty.|
 
 ### Model ID Mapping
 
-`model_types` in `[deepseek]` config (default: `["default", "expert"]`) maps to OpenAI model ID `deepseek-{type}` (e.g., `deepseek-default`, `deepseek-expert`). Anthropic compat uses the same IDs.
+`model_types` in `[ds_core]` config (default: `["default", "expert", "vision"]`) maps to OpenAI model ID `deepseek-{type}` (e.g., `deepseek-default`, `deepseek-expert`, `deepseek-vision`). Anthropic compat uses the same IDs.
 
 ---
 
@@ -413,7 +411,7 @@ Follow `docs/code-style.md`:
 - Do **NOT** use `println!`/`eprintln!` in library code — use `log` crate with target
 - Do **NOT** use untargeted log macros — always specify `target: "..."`
 - Do **NOT** access `ds_core` directly from `anthropic_compat` — always go through `OpenAIAdapter`
-- Do **NOT** use `#[allow(...)]` in any file except `ds_core/src/ds_core/client.rs` — dead API methods and deserialized fields for API symmetry are expected only in the raw HTTP client layer. New lint exemptions in other files must be resolved (refactor or consume the value) rather than suppressed.
+- Do **NOT** use `#[allow(...)]` in any file except `ds_core/src/accounts/client.rs` — dead API methods and deserialized fields for API symmetry are expected only in the raw HTTP client layer. New lint exemptions in other files must be resolved (refactor or consume the value) rather than suppressed.
 - Do **NOT** keep admin/auth config in separate JSON files (`admin.json`, `api_keys.json`) — they are merged into `Config` fields and persisted via `Config::save()` into `config.toml`
 - Do **NOT** run `git checkout`, `git commit`, or `gh` commands without explicit user permission — always ask before destructive or persistent operations
 ---
@@ -426,7 +424,7 @@ Follow `docs/code-style.md`:
 | WAF blocking (non-US) | AWS WAF Challenge response (status 202) | Configure a non-US proxy in `config.toml` `[proxy]` |
 | WAF blocking (fingerprint) | HTTP 403 or connection reset | `wreq` with BoringSSL automatically emulates Chrome 136 TLS fingerprint. If blocked, try updating `wreq` or switching emulation profile |
 | Account init failure | All accounts stuck in init | Bad credentials (login fails first) or rate-limited (too many sessions). Check `[accounts]` in config |
-| Tool call parse failure | No `tool_calls` in response, raw XML visible | Model output a tag variant not in the parse list. Add fallback `extra_starts`/`extra_ends` in `config.toml` `[deepseek]` |
+| Tool call parse failure | No `tool_calls` in response, raw XML visible | Model output a tag variant not in the parse list. Add fallback `extra_starts`/`extra_ends` in `config.toml` `[ds_core]` |
 | Rate limited | Repeated `CoreError::Overloaded` | Add more accounts or reduce concurrency. 6x exponential backoff handles transient spikes |
 | Session errors mid-stream | `invalid message id`, session not found | Usually handled by `GuardedStream::drop` cleanup. If persistent, check concurrent access to same account |
 | Oversized prompt rejected | `413` or truncation errors | Prompt exceeds DeepSeek limit. The oversized prompt fallback (chunked completion + file upload) handles this automatically; check `oversized_prompt` config section |
@@ -443,7 +441,7 @@ Follow `docs/code-style.md`:
 | Config loading | `src/config.rs` | Single unified entry, `-c` flag support |
 | Config reference | `config.example.toml` | All fields documented with examples (authoritative) |
 | DeepSeek chat flow | `ds_core/src/` | accounts → pow → completions → client |
-| Chat orchestration + file upload | `ds_core/src/ds_core/chat/request.rs` + `response.rs` | `v0_chat()`, history splitting, upload retry, `GuardedStream` |
+| Chat orchestration + file upload | `ds_core/src/chat/request.rs` + `response.rs` | `v0_chat()`, history splitting, upload retry, `GuardedStream` |
 | OpenAI request parsing | `src/openai_adapter/request/` | normalize → tools → files → prompt → resolver |
 | File upload extraction | `src/openai_adapter/request/files.rs` | data URL → FilePayload, HTTP URL → search mode |
 | Token counting (tiktoken) | `src/openai_adapter.rs` | `OpenAIAdapter::bpe` field, inlined in `chat_completions()` |
@@ -456,8 +454,8 @@ Follow `docs/code-style.md`:
 | OpenAI protocol types | `src/openai_adapter/types.rs` | Request/response structs, `#![allow(dead_code)]` |
 | Model listing | `src/openai_adapter/models.rs` | Model registry and listing |
 | HTTP server/routes | `src/server/` | handlers → stream → error |
-| PoW WASM solver | `ds_core/src/ds_core/pow.rs` | wasmtime loading, dynamic export probing, DeepSeekHashV1 |
-| DeepSeek HTTP client | `ds_core/src/ds_core/client.rs` | `Envelope::into_result()`, WAF detection, all API methods |
+| PoW WASM solver | `ds_core/src/accounts/pow.rs` | wasmtime loading, dynamic export probing, DeepSeekHashV1 |
+| DeepSeek HTTP client | `ds_core/src/accounts/client.rs` | `Envelope::into_result()`, WAF detection, all API methods |
 | Unified debug CLI | `examples/adapter_cli.rs` | Modes: chat/raw/compare/concurrent/status/models |
 | Example request JSON | `examples/adapter_cli/` | Pre-built ChatCompletionsRequest samples |
 | Scripted regression test | `just adapter-cli -- source examples/adapter_cli-script.txt` | Runs all JSON samples in sequence |
@@ -465,10 +463,11 @@ Follow `docs/code-style.md`:
 | e2e scenario test framework | `py-e2e-tests/` | JSON-driven scenarios with checks |
 | CI pipeline | `.github/workflows/ci.yml` | `cargo check + clippy + fmt + audit + machete` + `cargo test` |
 | Release workflow | `.github/workflows/release.yml` | Tag `v*` → 8 targets, 4 platforms, CHANGELOG release |
-| Code style | `docs/code-style.md` | Comments, naming conventions (Chinese in source files) |
-| Logging spec | `docs/logging-spec.md` | Targets, levels, message format for `log` crate |
-| Prompt injection strategy | `docs/deepseek-prompt-injection.md` | DeepSeek native tags, claude-3.5-sonnet system prompt research |
-| API reference | `docs/deepseek-api-reference.md` | DeepSeek endpoint details |
+| Code style | `docs/code-style.md` | 注释、命名、错误消息约定 |
+| Logging spec | `docs/logging-spec.md` | 日志级别、目标、模块级过滤 |
+| Prompt injection strategy | `docs/deepseek-prompt-injection.md` | DeepSeek 原生标签、工具调用注入策略 |
+| DeepSeek API reference | `ds_core/raw-api-reference.md` | 端点、信封格式、SSE 增量协议、PoW 算法 |
+| Development guide | `docs/development.md` | 环境配置、首次启动、Release 构建 |
 | Admin panel routes | `src/server/admin.rs` | Setup/login/config/status/stats/models/logs handlers |
 | JWT auth + password | `src/server/auth.rs` | `setup_admin()`/`login_admin()`, JWT sign/verify, login rate limiter |
 | Store manager | `src/server/store.rs` | API key validation, stats persistence, delegates admin/keys to `Config::save()` |

@@ -221,11 +221,11 @@ impl AccountPool {
                     };
                     let account = match init_account(&creds, &client, &solver).await {
                         Ok(account) => {
-                            info!(target: "ds_core::accounts", "账号 {} 初始化成功", display_id);
+                            info!(target: "ds_core::accounts", "Account {} initialized successfully", display_id);
                             account
                         }
                         Err(e) => {
-                            warn!(target: "ds_core::accounts", "账号 {} 初始化失败: {}", display_id, e);
+                            warn!(target: "ds_core::accounts", "Account {} initialization failed: {}", display_id, e);
                             // 即使初始化失败也加入池，标记为 Invalid 以便前台展示
                             Account::new_invalid(creds.clone())
                         }
@@ -247,9 +247,9 @@ impl AccountPool {
         }
 
         if idle_count == 0 {
-            warn!(target: "ds_core::accounts", "所有账号初始化失败：账号可能被禁用或凭据错误");
+            warn!(target: "ds_core::accounts", "All accounts failed to initialize — they may be disabled or have invalid credentials");
         } else if results.len() > 1 && idle_count < results.len() {
-            warn!(target: "ds_core::accounts", "{}/{} 个账号不可用", results.len() - idle_count, results.len());
+            warn!(target: "ds_core::accounts", "{}/{} accounts unavailable", results.len() - idle_count, results.len());
         }
         Ok(())
     }
@@ -275,7 +275,7 @@ impl AccountPool {
         let account = init_account(creds, client, solver).await?;
         let _id = account.display_id().to_string();
         self.accounts.insert(display_id.clone(), Arc::new(account));
-        info!(target: "ds_core::accounts", "动态添加账号 {} 成功", display_id);
+        info!(target: "ds_core::accounts", "Account {} added dynamically", display_id);
         Ok(display_id)
     }
 
@@ -297,7 +297,7 @@ impl AccountPool {
             .remove(email_or_mobile)
             .ok_or_else(|| PoolError::NotFound(email_or_mobile.to_string()))?;
         let id = removed.display_id().to_string();
-        info!(target: "ds_core::accounts", "动态移除账号 {}", id);
+        info!(target: "ds_core::accounts", "Account {} removed", id);
         Ok(id)
     }
 
@@ -397,7 +397,7 @@ impl AccountPool {
                     Ordering::Relaxed,
                 )
                 .ok();
-            warn!(target: "ds_core::accounts", "账号 {} 标记为 Error", account.display_id());
+            warn!(target: "ds_core::accounts", "Account {} marked as Error", account.display_id());
         }
     }
 
@@ -448,7 +448,7 @@ impl AccountPool {
                     .state
                     .store(AccountState::Idle as u8, Ordering::Relaxed);
                 account.error_count.store(0, Ordering::Relaxed);
-                info!(target: "ds_core::accounts", "账号 {} 重新登录成功", display_id);
+                info!(target: "ds_core::accounts", "Account {} re-login successful", display_id);
             }
             Err(e) => {
                 let count = account.error_count.fetch_add(1, Ordering::Relaxed) + 1;
@@ -456,9 +456,9 @@ impl AccountPool {
                     account
                         .state
                         .store(AccountState::Invalid as u8, Ordering::Relaxed);
-                    error!(target: "ds_core::accounts", "账号 {} 连续 {} 次重登失败，标记为 Invalid: {}", display_id, count, e);
+                    error!(target: "ds_core::accounts", "Account {} re-login failed {} times, marked as Invalid: {}", display_id, count, e);
                 } else {
-                    warn!(target: "ds_core::accounts", "账号 {} 重登失败 ({}次): {}", display_id, count, e);
+                    warn!(target: "ds_core::accounts", "Account {} re-login failed (attempt {}): {}", display_id, count, e);
                 }
             }
         }

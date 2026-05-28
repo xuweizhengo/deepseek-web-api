@@ -219,7 +219,7 @@ impl Accounts {
             .await
             .solve(&challenge_data)
             .map_err(|e| {
-                log::warn!(target: "ds_core::accounts", "PoW 计算失败: {}", e);
+                log::warn!(target: "ds_core::accounts", "PoW computation failed: {}", e);
                 CoreError::ProofOfWorkFailed(e)
             })?;
         Ok(result.to_header())

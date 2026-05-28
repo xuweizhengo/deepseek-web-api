@@ -15,19 +15,17 @@ ds_core 是一个**独立的库 crate**，不依赖主 crate 的任何类型：
 
 ```
 ds_core/src/
-├── lib.rs           ── 公开 API 重导出
-├── ds_core.rs       ── DsCore 门面，统一入口
-└── ds_core/
-    ├── accounts.rs  ── Accounts 门面，整合 client/pool/solver
-    ├── accounts/
-    │   ├── client.rs    ── DsClient：DeepSeek REST 客户端
-    │   ├── pool.rs      ── AccountPool：账号池、状态管理、恢复
-    │   └── pow.rs       ── PowSolver：WASM PoW 求解器
-    ├── chat.rs      ── Chat 门面，按 prompt 大小分流
-    ├── chat/
-    │   ├── request.rs   ── 三种请求路径（正常/历史文件/分块写入）
-    │   └── response.rs  ── ResponseStream：SSE 解析 + 精简事件协议
-    └── config.rs    ── DsCoreConfig / AccountConfig
+├── lib.rs           ── 公开 API 重导出 + DsCore/CoreError
+├── accounts.rs      ── Accounts 门面，整合 client/pool/solver
+├── accounts/
+│   ├── client.rs    ── DsClient：DeepSeek REST 客户端
+│   ├── pool.rs      ── AccountPool：账号池、状态管理、恢复
+│   └── pow.rs       ── PowSolver：WASM PoW 求解器
+├── chat.rs          ── Chat 门面，按 prompt 大小分流
+├── chat/
+│   ├── request.rs   ── 三种请求路径（正常/历史文件/分块写入）
+│   └── response.rs  ── ResponseStream：SSE 解析 + 精简事件协议
+└── config.rs        ── DsCoreConfig / AccountConfig
 ```
 
 ## 核心流程

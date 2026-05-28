@@ -15,19 +15,17 @@ ds_core is a **standalone library crate** with no dependency on the main crate:
 
 ```
 ds_core/src/
-├── lib.rs           ── Public API re-exports
-├── ds_core.rs       ── DsCore facade, unified entry point
-└── ds_core/
-    ├── accounts.rs  ── Accounts facade, integrates client/pool/solver
-    ├── accounts/
-    │   ├── client.rs    ── DsClient: DeepSeek REST client
-    │   ├── pool.rs      ── AccountPool: pool, state management, recovery
-    │   └── pow.rs       ── PowSolver: WASM PoW solver
-    ├── chat.rs      ── Chat facade, prompt-size dispatch
-    ├── chat/
-    │   ├── request.rs   ── Three request paths (normal/file-upload/chunked)
-    │   └── response.rs  ── ResponseStream: SSE parsing + streamlined event protocol
-    └── config.rs    ── DsCoreConfig / AccountConfig
+├── lib.rs           ── Public API re-exports + DsCore/CoreError
+├── accounts.rs      ── Accounts facade, integrates client/pool/solver
+├── accounts/
+│   ├── client.rs    ── DsClient: DeepSeek REST client
+│   ├── pool.rs      ── AccountPool: pool, state management, recovery
+│   └── pow.rs       ── PowSolver: WASM PoW solver
+├── chat.rs          ── Chat facade, prompt-size dispatch
+├── chat/
+│   ├── request.rs   ── Three request paths (normal/file-upload/chunked)
+│   └── response.rs  ── ResponseStream: SSE parsing + streamlined event protocol
+└── config.rs        ── DsCoreConfig / AccountConfig
 ```
 
 ## Core Flow

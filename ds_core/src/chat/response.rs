@@ -68,11 +68,11 @@ impl SessionHandle {
                     message_id,
                 };
                 if let Err(e) = client.stop_stream(&token, &payload).await {
-                    log::warn!(target: "ds_core::accounts", "stop_stream 失败: {}", e);
+                    log::warn!(target: "ds_core::accounts", "stop_stream failed: {}", e);
                 }
             }
             if let Err(e) = client.delete_session(&token, &session_id).await {
-                log::warn!(target: "ds_core::accounts", "delete_session 失败: {}", e);
+                log::warn!(target: "ds_core::accounts", "delete_session failed: {}", e);
             }
         });
     }

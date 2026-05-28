@@ -26,7 +26,8 @@ A Rust API proxy that translates DeepSeek's free web chat into standard OpenAI a
 - **Dual protocol support**: Both OpenAI Chat Completions and Anthropic Messages API, drop-in compatible with mainstream clients
 - **Tool call ready**: Full OpenAI function calling implementation with a 3-tier self-healing pipeline (text repair → JSON repair → model fallback), covering 10+ malformed formats
 - **File upload ready**: Inline data URL files in OpenAI `file`/`image_url` content parts and Anthropic `image`/`document` content blocks are automatically uploaded to DeepSeek sessions; HTTP URLs trigger search mode so the model can access link content directly
-- **Web admin panel**: Built-in dashboard for account pool status, API key management, request logs, and hot-reloadable config — ready out of the box
+- **Oversized prompt fallback**: When the prompt exceeds model limits, automatically falls back to chunked completion with file upload
+- **Web admin panel**: Built-in dashboard for account pool status, API key management, request logs, i18n internationalization, theme switcher, and hot-reloadable config — ready out of the box
 - **Built with Rust**: Single binary + single TOML config, cross-platform native performance (web panel compiled in at build time)
 - **Multi-account pool**: Idle-aware round-robin selection (DashMap lock-free reads), horizontal scaling for concurrency
 
@@ -51,7 +52,7 @@ RUST_LOG=debug ./ds-free-api
 ### Docker Usage
 
 ```bash
-docker compose -f docker-compose.yaml up -d
+docker compose -f docker/docker-compose.yaml up -d
 ```
 
 Refer to the [sample compose file](./docker/docker-compose.yaml) for reference.
@@ -61,13 +62,7 @@ The `config/` and `data/` directories are bind-mounted into the container — co
 
 ### Free Test Accounts
 
-~~All accounts use password `test12345`:~~
-
-```text
-Not stable, no longer provided here. Please register yourself.
-```
-
-> You can refer to the method in [issue #62](https://github.com/NIyueeE/ds-free-api/issues/62)
+Please register your own. You can refer to the method in [issue #62](https://github.com/NIyueeE/ds-free-api/issues/62).
 
 
 ## API Endpoints
@@ -87,12 +82,13 @@ The admin panel is at `/admin` — on first visit you'll be guided to set an adm
 
 ## Model Mapping
 
-The `model_types` config in `config.toml` (default `["default", "expert"]`) maps to model IDs:
+The `model_types` config in `config.toml` (default `["default", "expert", "vision"]`) maps to model IDs:
 
 | OpenAI Model ID    | DeepSeek Mode  |
 | ------------------ | -------------- |
 | `deepseek-default` | Fast mode      |
 | `deepseek-expert`  | Expert mode    |
+| `deepseek-vision`  | Vision mode    |
 
 Optional aliases via `model_aliases`, aligned by index with `model_types`. Empty strings are skipped:
 
@@ -125,7 +121,7 @@ The Anthropic compatibility layer uses the same model IDs via `/anthropic/v1/mes
 
 ### Tool Call Tag Hallucination
 
-Built-in fuzzy matching handles variations (full-width `｜`<=>`|`, `▁`<=>`_`) for most formats. If the model outputs a different fallback tag, add it via the admin panel or in `config.toml` under `[deepseek]`:
+Built-in fuzzy matching handles variations (full-width `｜`<=>`|`, `▁`<=>`_`) for most formats. If the model outputs a different fallback tag, add it via the admin panel or in `config.toml` under `[ds_core]`:
 
 ```toml
 tool_call.extra_starts = ["<|tool_call_begin|>", "<tool_calls>", "<tool_call>"]
@@ -340,7 +336,7 @@ flowchart TB
     style RS4 fill:#f8fafc,stroke:#d07354,stroke-width:2px
 ```
 
-For detailed development guide (building, testing, Docker deployment, e2e testing, etc.), see [docs/en/development.md](./docs/en/development.md).
+For detailed development guide (building, testing, Docker deployment, e2e testing, etc.), see [docs/development.md](./docs/development.md).
 
 ## License
 
